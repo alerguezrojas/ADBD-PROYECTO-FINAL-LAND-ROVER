@@ -5,9 +5,9 @@ Sistema de gestión para un taller especializado en Land Rovers clásicos, inclu
 
 ## Integrantes del equipo:
 
-* Alejandro [Tu Apellido]
-* Aitor [Apellido]
-* Javier [Apellido]
+* Alejandro Rodríguez Rojas
+* Aitor Manuel Perdomo Hermida
+* Javier Francisco Díaz
 
 ## Requisitos Previos
 
