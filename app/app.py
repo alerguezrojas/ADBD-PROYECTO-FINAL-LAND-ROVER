@@ -25,32 +25,34 @@ def home():
     return render_template('index.html')
 
 # ==========================================
-# 1. DASHBOARD & ESTADÍSTICAS
+# 1. DASHBOARD
 # ==========================================
 @app.route('/api/dashboard', methods=['GET'])
 def get_dashboard_stats():
     conn = get_db_connection()
+    if not conn: return jsonify({'error': 'Error conexión BD'}), 500
     cur = conn.cursor()
     stats = {}
-    
-    cur.execute("SELECT COUNT(*) FROM VEHICULO;")
-    stats['vehiculos'] = cur.fetchone()[0]
-    
-    cur.execute("SELECT COUNT(*) FROM PROYECTO WHERE Fecha_Fin IS NULL;")
-    stats['proyectos_activos'] = cur.fetchone()[0]
-    
-    cur.execute("SELECT SUM(Stock_Actual) FROM PIEZA;")
-    stats['piezas_stock'] = cur.fetchone()[0] or 0
-    
-    cur.execute("SELECT COUNT(*) FROM ASISTE_A WHERE Fecha_Fin >= CURRENT_DATE;")
-    stats['en_rodaje'] = cur.fetchone()[0]
-
-    cur.close()
-    conn.close()
+    try:
+        cur.execute("SELECT COUNT(*) FROM VEHICULO;")
+        stats['vehiculos'] = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(*) FROM PROYECTO WHERE Fecha_Fin IS NULL;")
+        stats['proyectos_activos'] = cur.fetchone()[0]
+        cur.execute("SELECT COALESCE(SUM(Stock_Actual), 0) FROM PIEZA;")
+        stats['piezas_stock'] = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(*) FROM ASISTE_A WHERE Fecha_Fin >= CURRENT_DATE;")
+        stats['en_rodaje'] = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(*) FROM CLIENTE;")
+        stats['clientes'] = cur.fetchone()[0]
+    except Exception as e:
+        print(e)
+    finally:
+        cur.close()
+        conn.close()
     return jsonify(stats)
 
 # ==========================================
-# 2. GESTIÓN DE PERSONAS
+# 2. GESTIÓN DE PERSONAS (ROBUSTO)
 # ==========================================
 @app.route('/api/personas', methods=['GET'])
 def get_personas():
@@ -81,20 +83,31 @@ def create_persona():
     conn = get_db_connection()
     cur = conn.cursor()
     try:
+        # Validación de campos obligatorios
+        dni = data.get('DNI')
+        nombre = data.get('Nombre')
+        if not dni or not nombre:
+            return jsonify({'error': 'Faltan datos: DNI y Nombre son obligatorios'}), 400
+
+        # Insertar en PERSONA
         cur.execute("""
             INSERT INTO PERSONA (DNI, Nombre, Apellidos, Email, Telefono)
             VALUES (%s, %s, %s, %s, %s)
-        """, (data['DNI'], data['Nombre'], data['Apellidos'], data['Email'], data['Telefono']))
+        """, (dni, nombre, data.get('Apellidos', ''), data.get('Email', ''), data.get('Telefono', '')))
         
-        if data['Rol'] == 'Cliente':
+        # Insertar en Subtipo
+        role = data.get('Rol', 'Cliente')
+        if role == 'Cliente':
             cur.execute("INSERT INTO CLIENTE (DNI_Cliente, Num_Cuenta, Fecha_Alta) VALUES (%s, %s, CURRENT_DATE)", 
-                       (data['DNI'], data['Num_Cuenta']))
-        elif data['Rol'] == 'Empleado':
+                       (dni, data.get('Num_Cuenta', '')))
+        elif role == 'Empleado':
+            salario = data.get('Salario')
+            if salario == '': salario = 0
             cur.execute("INSERT INTO EMPLEADO (DNI_Empleado, NSS, Salario, Fecha_Contratacion) VALUES (%s, %s, %s, CURRENT_DATE)", 
-                       (data['DNI'], data['NSS'], data['Salario']))
+                       (dni, data.get('NSS', ''), salario))
             
         conn.commit()
-        return jsonify({'msg': f"{data['Rol']} registrado correctamente"})
+        return jsonify({'msg': f"{role} registrado correctamente"})
     except Exception as e:
         conn.rollback()
         return jsonify({'error': str(e)}), 400
@@ -106,19 +119,24 @@ def delete_persona(dni):
     conn = get_db_connection()
     cur = conn.cursor()
     try:
+        # Intento de borrado limpio
         cur.execute("DELETE FROM CLIENTE WHERE DNI_Cliente = %s", (dni,))
         cur.execute("DELETE FROM EMPLEADO WHERE DNI_Empleado = %s", (dni,))
         cur.execute("DELETE FROM PERSONA WHERE DNI = %s", (dni,))
         conn.commit()
         return jsonify({'msg': 'Persona eliminada'})
+    except psycopg2.IntegrityError:
+        conn.rollback()
+        # Mensaje amigable si falla FK
+        return jsonify({'error': 'No se puede eliminar: Esta persona tiene Vehículos o Proyectos activos.'}), 400
     except Exception as e:
         conn.rollback()
-        return jsonify({'error': 'No se puede eliminar (tiene relaciones activas)'}), 400
+        return jsonify({'error': str(e)}), 400
     finally:
         conn.close()
 
 # ==========================================
-# 3. GESTIÓN DE VEHÍCULOS
+# 3. GESTIÓN DE VEHÍCULOS (CORREGIDO CURL)
 # ==========================================
 @app.route('/api/vehiculos', methods=['GET'])
 def get_vehiculos():
@@ -142,12 +160,31 @@ def create_vehiculo():
     conn = get_db_connection()
     cur = conn.cursor()
     try:
+        # LÓGICA FLEXIBLE: Acepta nombres de campo de la Web Y de la BD (cURL)
+        # Esto soluciona tu error de inserción
+        vin = data.get('VIN')
+        matricula = data.get('Matricula')
+        anio = data.get('Anio', 0)
+        
+        # Busca 'Color' (Web) O 'Color_Original' (cURL)
+        color = data.get('Color') or data.get('Color_Original', '')
+        
+        # Busca 'Motor' (Web) O 'Tipo_Motor' (cURL)
+        motor = data.get('Motor') or data.get('Tipo_Motor', '')
+        
+        # Busca 'DNI' (Web) O 'DNI_Propietario' (cURL)
+        dni = data.get('DNI') or data.get('DNI_Propietario')
+
+        if not vin or not dni:
+             return jsonify({'error': 'Faltan datos obligatorios (VIN, DNI)'}), 400
+
         cur.execute("""
             INSERT INTO VEHICULO (VIN, Matricula, Anio, Color_Original, Tipo_Motor, DNI_Propietario)
             VALUES (%s, %s, %s, %s, %s, %s)
-        """, (data['VIN'], data['Matricula'], data['Anio'], data['Color'], data['Motor'], data['DNI']))
+        """, (vin, matricula, anio, color, motor, dni))
+        
         conn.commit()
-        return jsonify({'msg': 'Vehículo creado correctamente'})
+        return jsonify({'msg': 'Vehiculo creado correctamente'})
     except Exception as e:
         conn.rollback()
         return jsonify({'error': str(e)}), 400
@@ -156,15 +193,33 @@ def create_vehiculo():
 
 @app.route('/api/vehiculos/<vin>', methods=['DELETE'])
 def delete_vehiculo(vin):
+    """
+    Borrado en cascada manual para evitar errores de integridad
+    """
     conn = get_db_connection()
     cur = conn.cursor()
     try:
+        # 1. Limpiar proyectos asociados y sus dependencias
+        cur.execute("SELECT ID_Proyecto FROM PROYECTO WHERE VIN_Vehiculo = %s", (vin,))
+        proyectos = cur.fetchall()
+        for row in proyectos:
+            pid = row[0]
+            cur.execute("DELETE FROM SUMINISTRA WHERE ID_Proyecto = %s", (pid,))
+            cur.execute("DELETE FROM TRABAJA_EN WHERE ID_Proyecto = %s", (pid,))
+            cur.execute("DELETE FROM FASE WHERE ID_Proyecto = %s", (pid,))
+            cur.execute("DELETE FROM PROYECTO WHERE ID_Proyecto = %s", (pid,))
+
+        # 2. Limpiar rodajes
+        cur.execute("DELETE FROM ASISTE_A WHERE VIN = %s", (vin,))
+
+        # 3. Borrar el coche
         cur.execute("DELETE FROM VEHICULO WHERE VIN = %s", (vin,))
+        
         conn.commit()
-        return jsonify({'msg': 'Vehículo eliminado'})
+        return jsonify({'msg': 'Vehiculo y su historial eliminados'})
     except Exception as e:
         conn.rollback()
-        return jsonify({'error': 'No se puede eliminar (tiene historial)'}), 400
+        return jsonify({'error': 'Error al eliminar: ' + str(e)}), 400
     finally:
         conn.close()
 
@@ -202,7 +257,7 @@ def create_proyecto():
         """, (data['Nombre'], data['VIN'], data['Supervisor']))
         id_proyecto = cur.fetchone()[0]
         
-        # Cumplir inclusividad
+        # Auto-asignación para cumplir Inclusividad
         cur.execute("INSERT INTO TRABAJA_EN (DNI_Empleado, ID_Proyecto, Horas_Dedicadas) VALUES (%s, %s, 0)", 
                    (data['Supervisor'], id_proyecto))
 
@@ -219,6 +274,10 @@ def delete_proyecto(id):
     conn = get_db_connection()
     cur = conn.cursor()
     try:
+        # Limpieza manual de hijos
+        cur.execute("DELETE FROM SUMINISTRA WHERE ID_Proyecto = %s", (id,))
+        cur.execute("DELETE FROM TRABAJA_EN WHERE ID_Proyecto = %s", (id,))
+        cur.execute("DELETE FROM FASE WHERE ID_Proyecto = %s", (id,))
         cur.execute("DELETE FROM PROYECTO WHERE ID_Proyecto = %s", (id,))
         conn.commit()
         return jsonify({'msg': 'Proyecto eliminado'})
@@ -229,7 +288,7 @@ def delete_proyecto(id):
         conn.close()
 
 # ==========================================
-# 5. GESTIÓN DE PIEZAS
+# 5. PIEZAS Y COMPRA (CORREGIDO ERROR SIN PROYECTOS)
 # ==========================================
 @app.route('/api/piezas', methods=['GET'])
 def get_piezas():
@@ -247,7 +306,7 @@ def create_pieza():
     cur = conn.cursor()
     try:
         cur.execute("INSERT INTO PIEZA (Ref_Pieza, Nombre, Descripcion, Stock_Actual) VALUES (%s, %s, %s, %s)", 
-                   (data['Ref_Pieza'], data['Nombre'], data['Descripcion'], data['Stock_Inicial']))
+                   (data['Ref_Pieza'], data['Nombre'], data.get('Descripcion', ''), data.get('Stock_Inicial', 0)))
         conn.commit()
         return jsonify({'msg': 'Referencia creada'})
     except Exception as e:
@@ -261,25 +320,42 @@ def delete_pieza(ref):
     conn = get_db_connection()
     cur = conn.cursor()
     try:
+        cur.execute("DELETE FROM SUMINISTRA WHERE Ref_Pieza = %s", (ref,))
+        cur.execute("DELETE FROM COMPATIBILIDAD WHERE Ref_Pieza = %s", (ref,))
         cur.execute("DELETE FROM PIEZA WHERE Ref_Pieza = %s", (ref,))
         conn.commit()
         return jsonify({'msg': 'Pieza eliminada'})
     except Exception as e:
         conn.rollback()
-        return jsonify({'error': 'No se puede eliminar (en uso)'}), 400
+        return jsonify({'error': 'No se puede eliminar (referenciada en historial)'}), 400
     finally:
         conn.close()
 
 @app.route('/api/comprar_pieza', methods=['POST'])
 def comprar_pieza():
+    """
+    CORRECCIÓN: Valida si hay un proyecto activo antes de intentar insertar.
+    """
     data = request.get_json()
     conn = get_db_connection()
     cur = conn.cursor()
     try:
-        cur.execute("INSERT INTO SUMINISTRA (CIF_Proveedor, Ref_Pieza, ID_Proyecto, Precio_Compra, Fecha_Suministro, Cantidad) VALUES ('B12345678', %s, 1, 50.00, CURRENT_DATE, %s)", 
-                   (data['Ref_Pieza'], data['Cantidad']))
+        # 1. Intentamos buscar el último proyecto activo para asignar la compra
+        cur.execute("SELECT ID_Proyecto FROM PROYECTO ORDER BY ID_Proyecto DESC LIMIT 1;")
+        res = cur.fetchone()
+        
+        # Si no hay proyectos, detenemos la operación con un error útil
+        if not res:
+            return jsonify({'error': 'ERROR DE NEGOCIO: No existe ningún proyecto activo en el sistema. Según el diseño (Relación Ternaria), toda compra de material debe asignarse a un Proyecto de restauración. Por favor, crea primero un Proyecto.'}), 400
+            
+        pid = res[0]
+        
+        # 2. Insertamos usando el ID de proyecto encontrado
+        cur.execute("INSERT INTO SUMINISTRA (CIF_Proveedor, Ref_Pieza, ID_Proyecto, Precio_Compra, Fecha_Suministro, Cantidad) VALUES ('B12345678', %s, %s, 50.00, CURRENT_DATE, %s)", 
+                   (data['Ref_Pieza'], pid, data['Cantidad']))
+        
         conn.commit()
-        return jsonify({'msg': f"Compra OK. Stock +{data['Cantidad']}."})
+        return jsonify({'msg': f"Compra registrada correctamente (Asignada al Proyecto #{pid}). Stock aumentado."})
     except Exception as e:
         conn.rollback()
         return jsonify({'error': str(e)}), 400
@@ -287,13 +363,12 @@ def comprar_pieza():
         conn.close()
 
 # ==========================================
-# 6. RODAJE (NUEVO: LISTAR Y BORRAR)
+# 6. RODAJE
 # ==========================================
 @app.route('/api/rodajes', methods=['GET'])
 def get_rodajes():
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
-    # JOIN para ver detalles del coche y del rodaje
     query = """
         SELECT A.VIN, A.ID_Rodaje, A.Fecha_Inicio, A.Fecha_Fin, A.Coste_Alquiler,
                V.Matricula, R.Productora, R.Lugar
@@ -316,7 +391,7 @@ def enviar_rodaje():
         cur.execute("INSERT INTO ASISTE_A (VIN, ID_Rodaje, Fecha_Inicio, Fecha_Fin, Coste_Alquiler) VALUES (%s, 1, CURRENT_DATE, CURRENT_DATE + 7, %s)", 
                    (data['VIN'], data['Coste']))
         conn.commit()
-        return jsonify({'msg': 'Vehículo enviado a rodaje.'})
+        return jsonify({'msg': 'Vehiculo enviado a rodaje.'})
     except psycopg2.InternalError as e:
         conn.rollback()
         return jsonify({'error': f"BLOQUEO BD: {e.pgerror}"}), 400

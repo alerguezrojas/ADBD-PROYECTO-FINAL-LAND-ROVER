@@ -213,7 +213,7 @@
             </div>
         </div>
 
-        <!-- 4. GESTIÓN DE PROYECTOS Y RODAJES (ACTUALIZADO) -->
+        <!-- 4. GESTIÓN DE PROYECTOS Y RODAJES -->
         <div x-show="activeTab === 'proyectos'" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             
             <!-- Panel de Control (Izquierda) -->
@@ -247,7 +247,7 @@
                 <!-- B: Enviar a Rodaje (Exclusión) -->
                 <div class="bg-red-50 border border-red-200 p-4 rounded-lg shadow-sm">
                     <h4 class="font-bold text-red-900 text-sm uppercase mb-3 flex items-center">
-                        <span class="mr-2"></span> Enviar a Rodaje
+                        <span class="mr-2">🎬</span> Enviar a Rodaje
                     </h4>
                     <p class="text-xs text-red-700 mb-3">Si el coche está en taller, esto fallará (Trigger de Exclusión).</p>
                     <select x-model="rodaje.vin" class="w-full border p-2 rounded text-sm mb-2 bg-white">
@@ -286,7 +286,7 @@
                 <!-- 2. Expediciones y Rodajes (NUEVO) -->
                 <div class="bg-white shadow rounded-lg overflow-hidden">
                     <div class="p-4 border-b bg-gray-50 font-bold text-red-700 border-l-4 border-red-500 flex items-center">
-                        <span class="mr-2"></span> Expediciones y Rodajes en Curso
+                        <span class="mr-2">🎬</span> Expediciones y Rodajes en Curso
                     </div>
                     <div class="p-4 grid grid-cols-1 gap-4">
                         <template x-for="r in rodajes" :key="r.id_rodaje + r.vin">
@@ -447,10 +447,8 @@
                 async deleteVehicle(vin) { if(confirm('¿Borrar vehículo?')) this.del(`/api/vehiculos/${vin}`); },
 
                 async createProject() {
-                    if(!this.newProj.Nombre || !this.newProj.VIN || !this.newProj.Supervisor) return this.showMsg('Todos los campos son obligatorios', 'error');
-                    this.post('/api/proyectos', this.newProj, () => {
-                        this.newProj = { Nombre: '', VIN: '', Supervisor: '' };
-                    });
+                    if(!this.newProj.VIN) return this.showMsg('Datos incompletos', 'error');
+                    this.post('/api/proyectos', this.newProj, () => this.newProj = { Nombre: '', VIN: '', Supervisor: '' });
                 },
                 async deleteProject(id) { if(confirm('¿Cancelar proyecto?')) this.del(`/api/proyectos/${id}`); },
 
