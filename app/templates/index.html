@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heritage Rover Works - Ultimate</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Alpine.js -->
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: { colors: { landrover: '#0B3B24', gold: '#C5A059', ivory: '#FDFCF0' } }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-100 font-sans" x-data="appData()" x-init="init()">
+
+    <!-- Navbar -->
+    <nav class="bg-landrover text-white shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto px-6 py-3 flex flex-col md:flex-row justify-between items-center">
+            <div class="flex items-center space-x-3 mb-2 md:mb-0">
+                <div class="h-8 w-8 bg-gold rounded text-landrover flex items-center justify-center font-bold shadow-inner">H</div>
+                <span class="text-xl font-bold tracking-wide">Heritage Rover Works</span>
+            </div>
+            <!-- Navegación -->
+            <div class="flex space-x-2 text-sm overflow-x-auto w-full md:w-auto pb-2 md:pb-0">
+                <template x-for="tab in tabs">
+                    <button @click="activeTab = tab.id" 
+                            :class="activeTab === tab.id ? 'bg-gold text-landrover font-bold' : 'hover:bg-white hover:bg-opacity-10'" 
+                            class="px-3 py-1.5 rounded transition duration-300 whitespace-nowrap" x-text="tab.label"></button>
+                </template>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Contenedor Principal -->
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+
+        <!-- NOTIFICACIONES -->
+        <div x-show="msg.text" x-transition.duration.300ms
+             :class="msg.type === 'error' ? 'bg-red-600' : 'bg-green-600'"
+             class="fixed bottom-5 right-5 text-white px-6 py-4 rounded-lg shadow-xl z-50 flex items-center" role="alert" style="display: none;">
+            <span class="font-bold mr-2" x-text="msg.type === 'error' ? '⚠ Error:' : '✓ Éxito:'"></span>
+            <span x-text="msg.text"></span>
+        </div>
+
+        <!-- 1. DASHBOARD -->
+        <div x-show="activeTab === 'dashboard'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-fade-in">
+            <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-landrover">
+                <div class="text-gray-500 text-xs font-bold uppercase">Total Vehículos</div>
+                <div class="text-4xl font-bold text-gray-800 mt-2" x-text="stats.vehiculos || 0"></div>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-gold">
+                <div class="text-gray-500 text-xs font-bold uppercase">Proyectos Activos</div>
+                <div class="text-4xl font-bold text-gray-800 mt-2" x-text="stats.proyectos_activos || 0"></div>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-blue-500">
+                <div class="text-gray-500 text-xs font-bold uppercase">Piezas en Stock</div>
+                <div class="text-4xl font-bold text-gray-800 mt-2" x-text="stats.piezas_stock || 0"></div>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-red-500">
+                <div class="text-gray-500 text-xs font-bold uppercase">En Rodaje</div>
+                <div class="text-4xl font-bold text-gray-800 mt-2" x-text="stats.en_rodaje || 0"></div>
+            </div>
+        </div>
+
+        <!-- 2. PERSONAS (GESTIÓN COMPLETA) -->
+        <div x-show="activeTab === 'personas'" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Formulario -->
+            <div class="lg:col-span-1">
+                <div class="bg-white shadow rounded-lg p-6 sticky top-24">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">Registrar Persona</h3>
+                    
+                    <!-- Selector de Rol -->
+                    <div class="flex mb-4 bg-gray-100 p-1 rounded">
+                        <button @click="newPerson.Rol = 'Cliente'" :class="newPerson.Rol === 'Cliente' ? 'bg-white shadow text-landrover' : 'text-gray-500'" class="flex-1 py-1 text-sm font-bold rounded transition">Cliente</button>
+                        <button @click="newPerson.Rol = 'Empleado'" :class="newPerson.Rol === 'Empleado' ? 'bg-white shadow text-blue-600' : 'text-gray-500'" class="flex-1 py-1 text-sm font-bold rounded transition">Empleado</button>
+                    </div>
+
+                    <div class="space-y-3">
+                        <input x-model="newPerson.DNI" placeholder="DNI *" class="w-full p-2 border rounded text-sm uppercase focus:ring-2 focus:ring-landrover outline-none">
+                        <div class="grid grid-cols-2 gap-2">
+                            <input x-model="newPerson.Nombre" placeholder="Nombre *" class="w-full p-2 border rounded text-sm focus:ring-2 focus:ring-landrover outline-none">
+                            <input x-model="newPerson.Apellidos" placeholder="Apellidos *" class="w-full p-2 border rounded text-sm focus:ring-2 focus:ring-landrover outline-none">
+                        </div>
+                        <input x-model="newPerson.Email" placeholder="Email" class="w-full p-2 border rounded text-sm focus:ring-2 focus:ring-landrover outline-none">
+                        <input x-model="newPerson.Telefono" placeholder="Teléfono" class="w-full p-2 border rounded text-sm focus:ring-2 focus:ring-landrover outline-none">
+                        
+                        <!-- Campos Cliente -->
+                        <div x-show="newPerson.Rol === 'Cliente'" class="bg-yellow-50 p-3 rounded border border-yellow-200">
+                            <label class="text-xs font-bold text-yellow-800 uppercase">Datos Bancarios</label>
+                            <input x-model="newPerson.Num_Cuenta" placeholder="IBAN (ES...)" class="w-full p-2 border rounded text-sm mt-1 focus:ring-1 focus:ring-yellow-500 outline-none">
+                        </div>
+
+                        <!-- Campos Empleado -->
+                        <div x-show="newPerson.Rol === 'Empleado'" class="bg-blue-50 p-3 rounded border border-blue-200">
+                            <label class="text-xs font-bold text-blue-800 uppercase">Datos Contratación</label>
+                            <input x-model="newPerson.NSS" placeholder="Nº Seguridad Social" class="w-full p-2 border rounded text-sm mt-1 focus:ring-1 focus:ring-blue-500 outline-none">
+                            <input x-model="newPerson.Salario" type="number" placeholder="Salario (€)" class="w-full p-2 border rounded text-sm mt-2 focus:ring-1 focus:ring-blue-500 outline-none">
+                        </div>
+                    </div>
+                    <button @click="createPerson()" class="w-full mt-4 bg-gray-800 text-white py-2 rounded font-bold hover:bg-gray-900 transition">Guardar Persona</button>
+                </div>
+            </div>
+
+            <!-- Lista -->
+            <div class="lg:col-span-2">
+                <div class="bg-white shadow rounded-lg overflow-hidden">
+                    <div class="p-4 border-b bg-gray-50 font-bold text-gray-700">Directorio de Personas</div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left">
+                            <thead class="bg-gray-100 text-gray-600 uppercase text-xs">
+                                <tr>
+                                    <th class="p-3">DNI / Nombre</th>
+                                    <th class="p-3">Contacto</th>
+                                    <th class="p-3">Rol</th>
+                                    <th class="p-3 text-right"></th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y">
+                                <template x-for="p in personas" :key="p.dni">
+                                    <tr class="hover:bg-gray-50 transition">
+                                        <td class="p-3">
+                                            <div class="font-bold text-gray-800" x-text="p.apellidos + ', ' + p.nombre"></div>
+                                            <div class="text-xs text-gray-500 font-mono" x-text="p.dni"></div>
+                                        </td>
+                                        <td class="p-3 text-gray-600">
+                                            <div x-text="p.email"></div>
+                                            <div x-text="p.telefono" class="text-xs"></div>
+                                        </td>
+                                        <td class="p-3">
+                                            <span :class="p.rol === 'Cliente' ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'" class="px-2 py-1 rounded text-xs font-bold" x-text="p.rol"></span>
+                                        </td>
+                                        <td class="p-3 text-right">
+                                            <button @click="deletePerson(p.dni)" class="text-red-400 hover:text-red-600 font-bold" title="Eliminar">✕</button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. FLOTA (VEHÍCULOS) -->
+        <div x-show="activeTab === 'vehiculos'" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Formulario Vehículo -->
+            <div class="lg:col-span-1">
+                <div class="bg-white shadow rounded-lg p-6 sticky top-24">
+                    <h3 class="text-lg font-bold text-landrover mb-4 border-b pb-2">Nuevo Land Rover</h3>
+                    <div class="space-y-3">
+                        <input x-model="newCar.VIN" placeholder="VIN (Bastidor) *" class="w-full p-2 border rounded text-sm uppercase focus:ring-2 focus:ring-landrover outline-none">
+                        <input x-model="newCar.Matricula" placeholder="Matrícula *" class="w-full p-2 border rounded text-sm uppercase focus:ring-2 focus:ring-landrover outline-none">
+                        <div class="grid grid-cols-2 gap-2">
+                            <input x-model="newCar.Anio" type="number" placeholder="Año" class="w-full p-2 border rounded text-sm focus:ring-2 focus:ring-landrover outline-none">
+                            <input x-model="newCar.Color" placeholder="Color" class="w-full p-2 border rounded text-sm focus:ring-2 focus:ring-landrover outline-none">
+                        </div>
+                        <input x-model="newCar.Motor" placeholder="Motor" class="w-full p-2 border rounded text-sm focus:ring-2 focus:ring-landrover outline-none">
+                        
+                        <label class="block text-xs font-bold text-gray-500 mt-2">Propietario (DNI)</label>
+                        <select x-model="newCar.DNI" class="w-full p-2 border rounded text-sm bg-gray-50 focus:ring-2 focus:ring-landrover outline-none">
+                            <option value="">Selecciona Cliente...</option>
+                            <template x-for="p in personas.filter(x => x.rol === 'Cliente')" :key="p.dni">
+                                <option :value="p.dni" x-text="p.nombre + ' ' + p.apellidos"></option>
+                            </template>
+                        </select>
+                        <p class="text-[10px] text-gray-400">* Solo se muestran clientes registrados</p>
+                    </div>
+                    <button @click="createVehicle()" class="w-full mt-4 bg-landrover text-white py-2 rounded font-bold hover:bg-opacity-90 transition">Registrar Vehículo</button>
+                </div>
+            </div>
+
+            <!-- Lista Vehículos -->
+            <div class="lg:col-span-2">
+                <div class="bg-white shadow rounded-lg overflow-hidden">
+                    <div class="p-4 border-b bg-gray-50 font-bold text-gray-700">Inventario de Flota</div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left">
+                            <thead class="bg-gray-100 text-gray-600 uppercase text-xs">
+                                <tr>
+                                    <th class="p-3">Vehículo</th>
+                                    <th class="p-3">Specs</th>
+                                    <th class="p-3">Propietario</th>
+                                    <th class="p-3 text-right"></th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y">
+                                <template x-for="car in vehiculos" :key="car.vin">
+                                    <tr class="hover:bg-gray-50 transition">
+                                        <td class="p-3">
+                                            <div class="font-bold text-gray-800" x-text="car.matricula"></div>
+                                            <div class="text-xs text-gray-500 font-mono" x-text="car.vin"></div>
+                                        </td>
+                                        <td class="p-3">
+                                            <div class="text-xs"><span class="font-bold">Motor:</span> <span x-text="car.tipo_motor"></span></div>
+                                            <div class="text-xs"><span class="font-bold">Color:</span> <span x-text="car.color_original"></span></div>
+                                            <div class="mt-1 bg-gray-200 text-gray-700 px-2 py-0.5 rounded text-[10px] inline-block" x-text="car.anio"></div>
+                                        </td>
+                                        <td class="p-3 text-gray-700" x-text="car.nombre_propietario"></td>
+                                        <td class="p-3 text-right">
+                                            <button @click="deleteVehicle(car.vin)" class="text-red-400 hover:text-red-600 font-bold" title="Borrar">✕</button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. GESTIÓN DE PROYECTOS Y RODAJES (ACTUALIZADO) -->
+        <div x-show="activeTab === 'proyectos'" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Panel de Control (Izquierda) -->
+            <div class="lg:col-span-1 space-y-6">
+                <!-- A: Nuevo Proyecto (Taller) -->
+                <div class="bg-white shadow p-4 rounded-lg border-l-4 border-gold">
+                    <h4 class="font-bold text-gray-800 mb-3 text-sm uppercase">Nuevo Proyecto (Taller)</h4>
+                    <div class="space-y-3">
+                        <input x-model="newProj.Nombre" placeholder="Descripción (ej: Pintura)" class="w-full p-2 border rounded text-sm focus:ring-1 focus:ring-gold outline-none">
+                        
+                        <label class="block text-xs font-bold text-gray-500">Vehículo</label>
+                        <select x-model="newProj.VIN" class="w-full p-2 border rounded text-sm bg-gray-50">
+                            <option value="">Selecciona Vehículo...</option>
+                            <template x-for="v in vehiculos" :key="v.vin">
+                                <option :value="v.vin" x-text="v.matricula"></option>
+                            </template>
+                        </select>
+                        
+                        <label class="block text-xs font-bold text-gray-500">Supervisor (Empleado)</label>
+                        <select x-model="newProj.Supervisor" class="w-full p-2 border rounded text-sm bg-gray-50">
+                            <option value="">Selecciona Jefe...</option>
+                            <!-- Filtrar solo Empleados -->
+                            <template x-for="p in personas.filter(x => x.rol === 'Empleado')" :key="p.dni">
+                                <option :value="p.dni" x-text="p.nombre + ' ' + p.apellidos"></option>
+                            </template>
+                        </select>
+                    </div>
+                    <button @click="createProject()" class="w-full mt-3 bg-gray-800 text-white py-2 rounded text-sm font-bold hover:bg-black transition">Abrir Proyecto</button>
+                </div>
+
+                <!-- B: Enviar a Rodaje (Exclusión) -->
+                <div class="bg-red-50 border border-red-200 p-4 rounded-lg shadow-sm">
+                    <h4 class="font-bold text-red-900 text-sm uppercase mb-3 flex items-center">
+                        <span class="mr-2"></span> Enviar a Rodaje
+                    </h4>
+                    <p class="text-xs text-red-700 mb-3">Si el coche está en taller, esto fallará (Trigger de Exclusión).</p>
+                    <select x-model="rodaje.vin" class="w-full border p-2 rounded text-sm mb-2 bg-white">
+                        <option value="">Selecciona Vehículo...</option>
+                        <template x-for="v in vehiculos" :key="v.vin">
+                            <option :value="v.vin" x-text="v.matricula"></option>
+                        </template>
+                    </select>
+                    <button @click="enviarRodaje()" class="w-full bg-red-600 text-white py-1.5 rounded text-sm font-bold hover:bg-red-700 transition">Confirmar Rodaje</button>
+                </div>
+            </div>
+
+            <!-- Listados (Derecha) -->
+            <div class="lg:col-span-2 space-y-6">
+                
+                <!-- 1. Restauraciones en Taller -->
+                <div class="bg-white shadow rounded-lg overflow-hidden">
+                    <div class="p-4 border-b bg-gray-50 font-bold text-gray-700 border-l-4 border-gold">Restauraciones en Taller</div>
+                    <div class="p-4 grid grid-cols-1 gap-4">
+                        <template x-for="proj in proyectos" :key="proj.id_proyecto">
+                           <div class="border rounded p-3 flex justify-between items-center hover:bg-gray-50 transition bg-white">
+                               <div>
+                                   <div class="flex items-center space-x-2">
+                                       <span class="bg-gray-100 text-gray-600 text-xs font-bold px-1 rounded">ID: <span x-text="proj.id_proyecto"></span></span>
+                                       <h3 class="font-bold text-gray-800 text-sm" x-text="proj.nombre_descriptivo"></h3>
+                                   </div>
+                                   <p class="text-xs text-gray-500 mt-1">Vehículo: <span class="font-mono font-bold" x-text="proj.matricula"></span> | Supervisor: <span x-text="proj.supervisor"></span></p>
+                               </div>
+                               <button @click="deleteProject(proj.id_proyecto)" class="text-gray-400 hover:text-red-600 font-bold px-2" title="Cancelar">✕</button>
+                           </div>
+                        </template>
+                        <div x-show="proyectos.length === 0" class="text-center text-gray-400 py-4 text-sm">Sin proyectos activos.</div>
+                   </div>
+                </div>
+
+                <!-- 2. Expediciones y Rodajes (NUEVO) -->
+                <div class="bg-white shadow rounded-lg overflow-hidden">
+                    <div class="p-4 border-b bg-gray-50 font-bold text-red-700 border-l-4 border-red-500 flex items-center">
+                        <span class="mr-2"></span> Expediciones y Rodajes en Curso
+                    </div>
+                    <div class="p-4 grid grid-cols-1 gap-4">
+                        <template x-for="r in rodajes" :key="r.id_rodaje + r.vin">
+                           <div class="border border-red-100 rounded p-3 flex justify-between items-center hover:bg-red-50 transition bg-white">
+                               <div>
+                                   <h3 class="font-bold text-red-900 text-sm" x-text="r.productora"></h3>
+                                   <p class="text-xs text-red-600 mt-1">Vehículo: <span class="font-mono font-bold" x-text="r.matricula"></span> | Lugar: <span x-text="r.lugar"></span></p>
+                                   <p class="text-[10px] text-gray-400">Inicio: <span x-text="r.fecha_inicio"></span></p>
+                               </div>
+                               <button @click="deleteRodaje(r.vin, r.id_rodaje)" class="text-red-300 hover:text-red-600 font-bold px-2" title="Finalizar Rodaje">✕</button>
+                           </div>
+                        </template>
+                        <div x-show="rodajes.length === 0" class="text-center text-gray-400 py-4 text-sm">Ningún vehículo en rodaje.</div>
+                   </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- 5. ALMACÉN (PIEZAS Y TRIGGERS) -->
+        <div x-show="activeTab === 'almacen'" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Columna 1: Crear Pieza y Lista -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Crear Pieza -->
+                <div class="bg-white shadow p-4 rounded-lg flex flex-col md:flex-row gap-4 items-end border-l-4 border-blue-500">
+                    <div class="flex-1 w-full">
+                        <label class="text-xs font-bold text-gray-500 uppercase tracking-wide">Nueva Referencia de Pieza</label>
+                        <div class="grid grid-cols-4 gap-2 mt-1">
+                            <input x-model="newPart.Ref_Pieza" placeholder="REF001" class="border p-2 rounded text-sm uppercase focus:ring-1 focus:ring-blue-500 outline-none">
+                            <input x-model="newPart.Nombre" placeholder="Nombre Pieza" class="border p-2 rounded text-sm col-span-2 focus:ring-1 focus:ring-blue-500 outline-none">
+                            <input x-model="newPart.Stock_Inicial" type="number" placeholder="Stock" class="border p-2 rounded text-sm focus:ring-1 focus:ring-blue-500 outline-none">
+                        </div>
+                        <input x-model="newPart.Descripcion" placeholder="Descripción técnica..." class="border p-2 rounded text-sm w-full mt-2 focus:ring-1 focus:ring-blue-500 outline-none">
+                    </div>
+                    <button @click="createPart()" class="bg-blue-600 text-white px-4 py-2 rounded font-bold text-sm h-10 hover:bg-blue-700 transition">Crear</button>
+                </div>
+
+                <!-- Lista Stock -->
+                <div class="bg-white shadow rounded-lg overflow-hidden">
+                    <div class="p-3 bg-gray-100 text-xs font-bold text-gray-500 uppercase">Catálogo de Piezas</div>
+                    <div class="overflow-y-auto max-h-[500px]">
+                        <table class="w-full text-sm text-left">
+                            <thead class="bg-white border-b sticky top-0">
+                                <tr>
+                                    <th class="p-3">Ref / Nombre</th>
+                                    <th class="p-3 text-right">Stock</th>
+                                    <th class="p-3 text-right"></th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y">
+                                <template x-for="p in piezas" :key="p.ref_pieza">
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="p-3">
+                                            <div class="font-bold text-gray-800" x-text="p.nombre"></div>
+                                            <div class="text-xs text-gray-500 font-mono" x-text="p.ref_pieza"></div>
+                                        </td>
+                                        <td class="p-3 text-right">
+                                            <span :class="p.stock_actual < 5 ? 'text-red-500 font-bold' : 'text-green-600 font-bold'" x-text="p.stock_actual"></span>
+                                        </td>
+                                        <td class="p-3 text-right">
+                                            <button @click="deletePart(p.ref_pieza)" class="text-gray-400 hover:text-red-500 font-bold" title="Eliminar">✕</button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Columna 2: Panel de Pruebas (Triggers) -->
+            <div class="lg:col-span-1 space-y-6">
+                <!-- Trigger Compra -->
+                <div class="bg-blue-50 border border-blue-200 p-5 rounded-lg shadow-sm">
+                    <h4 class="font-bold text-blue-900 flex items-center mb-3">
+                        <span class="bg-blue-200 p-1 rounded mr-2 text-xs">⚡ TRIGGER A</span> Compra Automática
+                    </h4>
+                    <p class="text-xs text-blue-700 mb-3">La compra a proveedores inserta en <code>SUMINISTRA</code> y dispara la actualización automática de <code>PIEZA</code>.</p>
+                    <div class="flex space-x-2">
+                        <select x-model="compra.ref" class="border p-2 rounded text-sm flex-1 bg-white">
+                            <template x-for="p in piezas" :key="p.ref_pieza">
+                                <option :value="p.ref_pieza" x-text="p.nombre"></option>
+                            </template>
+                        </select>
+                        <input x-model="compra.cantidad" type="number" class="w-16 border p-2 rounded text-sm text-center" placeholder="Cant">
+                    </div>
+                    <button @click="comprarPieza()" class="w-full mt-2 bg-blue-600 text-white py-1.5 rounded text-sm font-bold hover:bg-blue-700 transition">Registrar Compra</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- LÓGICA DE APLICACIÓN (ALPINE.JS) -->
+    <script>
+        function appData() {
+            return {
+                activeTab: 'dashboard',
+                tabs: [
+                    {id: 'dashboard', label: 'Dashboard'},
+                    {id: 'personas', label: 'Personas'},
+                    {id: 'vehiculos', label: 'Flota'},
+                    {id: 'proyectos', label: 'Proyectos & Rodajes'},
+                    {id: 'almacen', label: 'Almacén'}
+                ],
+                // Estado
+                stats: {}, personas: [], vehiculos: [], proyectos: [], piezas: [], rodajes: [],
+                msg: { text: '', type: '' },
+
+                // Modelos de Formularios
+                newPerson: { DNI: '', Nombre: '', Apellidos: '', Email: '', Telefono: '', Rol: 'Cliente', Num_Cuenta: '', NSS: '', Salario: '' },
+                newCar: { VIN: '', Matricula: '', Anio: '', Color: '', Motor: '', DNI: '' },
+                newProj: { Nombre: '', VIN: '', Supervisor: '' },
+                newPart: { Ref_Pieza: '', Nombre: '', Descripcion: '', Stock_Inicial: 0 },
+                compra: { ref: '', cantidad: 5 },
+                rodaje: { vin: '', coste: 2000 },
+
+                init() { this.refreshAll(); },
+
+                async refreshAll() {
+                    // Carga paralela de todos los datos
+                    await Promise.all([
+                        this.fetchData('/api/dashboard', 'stats'),
+                        this.fetchData('/api/personas', 'personas'),
+                        this.fetchData('/api/vehiculos', 'vehiculos'),
+                        this.fetchData('/api/proyectos', 'proyectos'),
+                        this.fetchData('/api/piezas', 'piezas'),
+                        this.fetchData('/api/rodajes', 'rodajes')
+                    ]);
+                    // Auto-seleccionar primera pieza si existe
+                    if(this.piezas.length > 0 && !this.compra.ref) this.compra.ref = this.piezas[0].ref_pieza;
+                },
+
+                async fetchData(url, key) {
+                    try { 
+                        const res = await fetch(url);
+                        if(res.ok) this[key] = await res.json();
+                    } catch(e) { console.error("Error cargando " + key, e); }
+                },
+
+                // --- ACCIONES UNIFICADAS ---
+                
+                async createPerson() { 
+                    if(!this.newPerson.DNI || !this.newPerson.Nombre) return this.showMsg('DNI y Nombre son obligatorios', 'error');
+                    this.post('/api/personas', this.newPerson, () => {
+                        this.newPerson = { DNI: '', Nombre: '', Apellidos: '', Email: '', Telefono: '', Rol: 'Cliente', Num_Cuenta: '', NSS: '', Salario: '' };
+                    }); 
+                },
+                async deletePerson(dni) { if(confirm('¿Borrar persona?')) this.del(`/api/personas/${dni}`); },
+
+                async createVehicle() { 
+                    if(!this.newCar.VIN || !this.newCar.DNI) return this.showMsg('VIN y Propietario obligatorios', 'error');
+                    this.post('/api/vehiculos', this.newCar, () => {
+                        this.newCar = { VIN: '', Matricula: '', Anio: '', Color: '', Motor: '', DNI: '' };
+                    }); 
+                },
+                async deleteVehicle(vin) { if(confirm('¿Borrar vehículo?')) this.del(`/api/vehiculos/${vin}`); },
+
+                async createProject() {
+                    if(!this.newProj.Nombre || !this.newProj.VIN || !this.newProj.Supervisor) return this.showMsg('Todos los campos son obligatorios', 'error');
+                    this.post('/api/proyectos', this.newProj, () => {
+                        this.newProj = { Nombre: '', VIN: '', Supervisor: '' };
+                    });
+                },
+                async deleteProject(id) { if(confirm('¿Cancelar proyecto?')) this.del(`/api/proyectos/${id}`); },
+
+                async createPart() { 
+                    if(!this.newPart.Ref_Pieza) return this.showMsg('Referencia obligatoria', 'error');
+                    this.post('/api/piezas', this.newPart, () => {
+                        this.newPart = { Ref_Pieza: '', Nombre: '', Descripcion: '', Stock_Inicial: 0 };
+                    }); 
+                },
+                async deletePart(ref) { if(confirm('¿Borrar pieza del catálogo?')) this.del(`/api/piezas/${ref}`); },
+
+                async comprarPieza() { 
+                    if(!this.compra.ref) return this.showMsg('Selecciona una pieza', 'error');
+                    this.post('/api/comprar_pieza', { Ref_Pieza: this.compra.ref, Cantidad: parseInt(this.compra.cantidad) }); 
+                },
+                async enviarRodaje() { 
+                    if(!this.rodaje.vin) return this.showMsg('Selecciona un vehículo', 'error');
+                    this.post('/api/enviar_rodaje', { VIN: this.rodaje.vin, Coste: this.rodaje.coste }); 
+                },
+                async deleteRodaje(vin, id) { 
+                    if(confirm('¿Finalizar Rodaje?')) this.del(`/api/rodajes/${vin}/${id}`); 
+                },
+
+                // --- HELPERS AJAX ---
+                async post(url, body, callback) {
+                    try {
+                        const res = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+                        const data = await res.json();
+                        this.handleRes(res.ok, data, callback);
+                    } catch(e) { this.showMsg('Error de conexión con el servidor', 'error'); }
+                },
+                async del(url) {
+                    try {
+                        const res = await fetch(url, { method: 'DELETE' });
+                        const data = await res.json();
+                        this.handleRes(res.ok, data);
+                    } catch(e) { this.showMsg('Error de conexión con el servidor', 'error'); }
+                },
+                handleRes(ok, data, callback) {
+                    this.msg = { text: ok ? (data.msg || 'Operación realizada') : (data.error || 'Error desconocido'), type: ok ? 'success' : 'error' };
+                    if(ok) { 
+                        this.refreshAll(); 
+                        if(callback) callback(); 
+                    }
+                    setTimeout(() => this.msg.text = '', 4000);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
