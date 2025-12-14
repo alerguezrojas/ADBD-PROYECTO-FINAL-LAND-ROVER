@@ -161,7 +161,6 @@ def create_vehiculo():
     cur = conn.cursor()
     try:
         # LÓGICA FLEXIBLE: Acepta nombres de campo de la Web Y de la BD (cURL)
-        # Esto soluciona tu error de inserción
         vin = data.get('VIN')
         matricula = data.get('Matricula')
         anio = data.get('Anio', 0)
