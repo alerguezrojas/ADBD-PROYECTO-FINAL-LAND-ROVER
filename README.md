@@ -239,16 +239,21 @@ curl -X DELETE http://localhost:5000/api/rodajes/TEST001/1
 
 ## Estructura del Proyecto
 
+* `app/`: Código fuente de la aplicación web.
+    * `templates/`: Plantillas HTML para la interfaz de usuario.
+        * `index.html`: Página principal de la aplicación (Dashboard).
+    * `app.py`: Servidor Flask y endpoints de la API REST.
+* `docs/`: Documentación del proyecto.
+    * `ADBD-Informe Proyecto Final_ Heritage Rover Works.pdf`: Memoria completa del proyecto.
+    * `ENTIDAD-RELACION.drawio`: Archivo fuente del diagrama Entidad-Relación.
+    * `ENTIDAD-RELACION.png`: Imagen exportada del diagrama E-R.
+    * `RELACIONAL.png`: Imagen del esquema relacional.
 * `sql/`: Directorio con los scripts SQL para la base de datos.
-    * `schema.sql`: Definición de tablas y restricciones.
     * `data.sql`: Datos de prueba iniciales.
     * `logic.sql`: Procedimientos almacenados, funciones y triggers.
     * `queries.sql`: Consultas de ejemplo.
+    * `schema.sql`: Definición de tablas y restricciones.
     * `tests.sql`: Tests de validación de reglas de negocio.
-* `app/`: Código fuente de la aplicación web.
-    * `app.py`: Servidor Flask y endpoints de la API REST.
-    * `templates/`: Plantillas HTML para la interfaz de usuario.
-* `docs/`: Documentación del proyecto.
-    * `ENTIDAD-RELACION.drawio`: Diagrama E-R de la base de datos.
 * `venv/`: Entorno virtual de Python (generado localmente).
+* `README.md`: Este archivo con instrucciones y documentación.
 
