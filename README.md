@@ -54,6 +54,12 @@ sudo -u postgres psql -d landrovers -f sql/logic.sql
 sudo -u postgres psql -d landrovers -f sql/queries.sql
 ```
 
+### (Opcional) Tests de validación:
+
+```bash
+sudo -u postgres psql -d landrovers -f sql/tests.sql
+```
+
 ## 2. Configuración de la Aplicación (Flask)
 
 ### Configurar credenciales:
@@ -233,10 +239,16 @@ curl -X DELETE http://localhost:5000/api/rodajes/TEST001/1
 
 ## Estructura del Proyecto
 
-* `sql/`: Scripts SQL (schema.sql, data.sql, logic.sql, queries.sql).
-* `app/`: Código fuente de la aplicación.
-    * `app.py`: API REST y servidor web Flask.
-    * `templates/`: Archivos HTML para la interfaz de usuario.
-* `docs/`: Documentación del proyecto, diagramas y memoria.
-* `venv/`: Entorno virtual de Python.
+* `sql/`: Directorio con los scripts SQL para la base de datos.
+    * `schema.sql`: Definición de tablas y restricciones.
+    * `data.sql`: Datos de prueba iniciales.
+    * `logic.sql`: Procedimientos almacenados, funciones y triggers.
+    * `queries.sql`: Consultas de ejemplo.
+    * `tests.sql`: Tests de validación de reglas de negocio.
+* `app/`: Código fuente de la aplicación web.
+    * `app.py`: Servidor Flask y endpoints de la API REST.
+    * `templates/`: Plantillas HTML para la interfaz de usuario.
+* `docs/`: Documentación del proyecto.
+    * `ENTIDAD-RELACION.drawio`: Diagrama E-R de la base de datos.
+* `venv/`: Entorno virtual de Python (generado localmente).
 
