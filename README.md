@@ -30,10 +30,10 @@ Para desplegar la base de datos, ejecuta los scripts SQL en el siguiente orden e
 
 Abre una terminal en la carpeta del proyecto y ejecuta:
 
-### Crear el esquema (Tablas):
+### Crear la base de datos y el esquema (Tablas):
 
 ```bash
-sudo -u postgres psql -d landrovers -f sql/schema.sql
+sudo -u postgres psql -f sql/schema.sql
 ```
 
 ### Cargar datos de prueba:
